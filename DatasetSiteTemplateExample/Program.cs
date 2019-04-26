@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using OpenActive.NET;
 using Newtonsoft.Json;
@@ -24,7 +24,7 @@ namespace DatasetSiteTemplateExample
             {
                 organisationName = "Better",
                 datasetSiteUrl = "https://halo-odi.legendonlineservices.co.uk/openactive/",
-                datasetSiteDocumentationUrl = "https://github.com/gll-better/opendata",
+                datasetSiteDiscussionUrl = "https://github.com/gll-better/opendata",
                 documentationUrl = "https://docs.acmebooker.example.com/",
                 legalEntity = "GLL",
                 plainTextDescription = "Established in 1993, GLL is the largest UK-based charitable social enterprise delivering leisure, health and community services. Under the consumer facing brand Better, we operate 258 public Sports and Leisure facilities, 88 libraries, 10 children’s centres and 5 adventure playgrounds in partnership with 50 local councils, public agencies and sporting organisations. Better leisure facilities enjoy 46 million visitors a year and have more than 650,000 members.",
@@ -51,7 +51,7 @@ namespace DatasetSiteTemplateExample
                     "OpenActive"
                 },
                 License = new Uri("https://creativecommons.org/licenses/by/4.0/"),
-                DiscussionUrl = Utils.SafeParseUrl(settings.datasetSiteDocumentationUrl),
+                DiscussionUrl = Utils.SafeParseUrl(settings.datasetSiteDiscussionUrl),
                 Documentation = Utils.SafeParseUrl(settings.documentationUrl),
                 InLanguage = "en-GB",
                 SoftwareVersion = Utils.ApplicationVersion.GetVersion(),
