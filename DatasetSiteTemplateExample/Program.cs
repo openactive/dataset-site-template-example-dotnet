@@ -32,7 +32,7 @@ namespace DatasetSiteTemplateExample
                 url = "https://www.better.org.uk/",
                 logoUrl = "http://data.better.org.uk/images/logo.png",
                 backgroundImageUrl = "https://data.better.org.uk/images/bg.jpg",
-                baseUrl = "https://customer.example.com/feed/"
+                baseUrl = "https://halo-odi.legendonlineservices.co.uk/api/"
             };
 
             // Strongly typed JSON generation based on OpenActive.NET
