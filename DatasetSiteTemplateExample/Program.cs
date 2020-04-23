@@ -36,13 +36,13 @@ namespace DatasetSiteTemplateExample
             };
 
             // Strongly typed JSON generation based on OpenActive.NET
-            var data = new DatasetExtended
+            var data = new Dataset
             {
-                Id = Utils.SafeParseUrl(settings.datasetSiteUrl),
-                Url = Utils.SafeParseUrl(settings.datasetSiteUrl),
+                Id = settings.datasetSiteUrl.ParseUrlOrNull(),
+                Url = settings.datasetSiteUrl.ParseUrlOrNull(),
                 Name = settings.organisationName + " Sessions and Facilities",
                 Description = $"Near real-time availability and rich descriptions relating to the sessions and facilities available from {settings.organisationName}, published using the OpenActive Modelling Specification 2.0.",
-                Keywords = new string[6] {
+                Keywords = new List<string> {
                     "Sessions",
                     "Facilities",
                     "Activities",
@@ -51,21 +51,26 @@ namespace DatasetSiteTemplateExample
                     "OpenActive"
                 },
                 License = new Uri("https://creativecommons.org/licenses/by/4.0/"),
-                DiscussionUrl = Utils.SafeParseUrl(settings.datasetSiteDiscussionUrl),
-                Documentation = Utils.SafeParseUrl(settings.documentationUrl),
-                InLanguage = "en-GB",
-                SoftwareVersion = Utils.ApplicationVersion.GetVersion(),
-                SchemaVersion = "https://www.openactive.io/modelling-opportunity-data/2.0/",
-                Publisher = new OpenActive.NET.Organization
+                DiscussionUrl = settings.datasetSiteDiscussionUrl.ParseUrlOrNull(),
+                Documentation = settings.documentationUrl.ParseUrlOrNull(),
+                InLanguage = new List<string> { "en-GB" },
+                BookingService = new BookingService
+                {
+                    Name = platform.platformName,
+                    Url = platform.platformUrl.ParseUrlOrNull(),
+                    SoftwareVersion = Utils.ApplicationVersion.GetVersion(),
+                },
+                SchemaVersion = "https://www.openactive.io/modelling-opportunity-data/2.0/".ParseUrlOrNull(),
+                Publisher = new Organization
                 {
                     Name = settings.organisationName,
                     LegalName = settings.legalEntity,
                     Description = settings.plainTextDescription,
                     Email = settings.email,
-                    Url = Utils.SafeParseUrl(settings.url),
-                    Logo = new OpenActive.NET.ImageObject
+                    Url = settings.url.ParseUrlOrNull(),
+                    Logo = new ImageObject
                     {
-                        Url = Utils.SafeParseUrl(settings.logoUrl)
+                        Url = settings.logoUrl.ParseUrlOrNull()
                     }
                 },
                 Distribution = new List<DataDownload>
@@ -74,39 +79,45 @@ namespace DatasetSiteTemplateExample
                     {
                         Name = "SessionSeries",
                         AdditionalType = new Uri("https://openactive.io/SessionSeries"),
-                        EncodingFormat = OpenActiveDiscovery.MediaTypes.Version1.RealtimePagedDataExchange.ToString(),
-                        ContentUrl = Utils.SafeParseUrl(settings.baseUrl + "feeds/session-series")
+                        EncodingFormat = OpenActiveMediaTypes.RealtimePagedDataExchange.Version1,
+                        ContentUrl = (settings.baseUrl + "feeds/session-series").ParseUrlOrNull(),
+                        Identifier = "SessionSeries"
                     },
                     new DataDownload
                     {
                         Name = "ScheduledSession",
                         AdditionalType = new Uri("https://openactive.io/ScheduledSession"),
-                        EncodingFormat = OpenActiveDiscovery.MediaTypes.Version1.RealtimePagedDataExchange.ToString(),
-                        ContentUrl = Utils.SafeParseUrl(settings.baseUrl + "feeds/scheduled-sessions")
+                        EncodingFormat = OpenActiveMediaTypes.RealtimePagedDataExchange.Version1,
+                        ContentUrl = (settings.baseUrl + "feeds/scheduled-sessions").ParseUrlOrNull(),
+                        Identifier = "ScheduledSession"
                     },
                     new DataDownload
                     {
                         Name = "FacilityUse",
                         AdditionalType = new Uri("https://openactive.io/FacilityUse"),
-                        EncodingFormat = OpenActiveDiscovery.MediaTypes.Version1.RealtimePagedDataExchange.ToString(),
-                        ContentUrl = Utils.SafeParseUrl(settings.baseUrl + "feeds/facility-uses")
+                        EncodingFormat = OpenActiveMediaTypes.RealtimePagedDataExchange.Version1,
+                        ContentUrl = (settings.baseUrl + "feeds/facility-uses").ParseUrlOrNull(),
+                        Identifier = "FacilityUse"
                     },
                     new DataDownload
                     {
-                        Name = "Slot",
+                        Name = "Slot for FacilityUse",
                         AdditionalType = new Uri("https://openactive.io/Slot"),
-                        EncodingFormat = OpenActiveDiscovery.MediaTypes.Version1.RealtimePagedDataExchange.ToString(),
-                        ContentUrl = Utils.SafeParseUrl(settings.baseUrl + "feeds/slots")
+                        EncodingFormat = OpenActiveMediaTypes.RealtimePagedDataExchange.Version1,
+                        ContentUrl = (settings.baseUrl + "feeds/slots").ParseUrlOrNull(),
+                        Identifier = "FacilityUseSlot"
                     }
                 },
                 DatePublished = DateTimeOffset.UtcNow,
-                BackgroundImage = Utils.SafeParseUrl(settings.backgroundImageUrl),
-                PlatformName = platform.platformName,
-                PlatformUrl = Utils.SafeParseUrl(platform.platformUrl)
+                DateModified = DateTimeOffset.UtcNow,
+                BackgroundImage = new ImageObject
+                {
+                    Url = settings.backgroundImageUrl.ParseUrlOrNull()
+                }
             };
 
             // OpenActive.NET creates complete JSON from the strongly typed structure, complete with schema.org types.
-            var jsonString = data.ToString(new JsonSerializerSettings { Formatting = Formatting.Indented, NullValueHandling = NullValueHandling.Ignore });
+            var jsonString = OpenActiveSerializer.SerializeToHtmlEmbeddableString(data);
 
             // Deserialize the completed JSON object to make it compatible with the mustache template
             dynamic jsonData = JsonConvert.DeserializeObject(jsonString);
@@ -116,7 +127,7 @@ namespace DatasetSiteTemplateExample
             jsonData.json = jsonString;
 
             // Download the mustache template
-            // Note it is not recommended to download this live in production, this file should be copied locally and loaded into memory
+            // FOR PRODUCTION USE DO NOT DOWNLOAD THE MUSTACHE FILE LIVE, A COPY MUST BE STORED LOCALLY TO PREVENT XSS ATTACKS
             var client = new RestClient("https://www.openactive.io/");
             var request = new RestRequest("dataset-site-template/datasetsite.mustache", Method.GET);
             request.OnBeforeDeserialization = resp => { resp.ContentType = "application/json"; };
@@ -130,23 +141,10 @@ namespace DatasetSiteTemplateExample
             //Output HTML for the completed page
             // Note to test this simply add "> output.txt" to the command-line arguments in Visual Studio's debug properties.
             Console.WriteLine(output);
-            
         }
 
         public class Utils
         {
-            public static Uri SafeParseUrl(string str)
-            {
-                if (Uri.TryCreate(str, UriKind.Absolute, out Uri url))
-                {
-                    return url;
-                }
-                else
-                {
-                    return null;
-                }
-            }
-
             public class ApplicationVersion
             {
                 public static string GetVersion()
@@ -154,65 +152,6 @@ namespace DatasetSiteTemplateExample
                     return typeof(ApplicationVersion).Assembly.GetName().Version.ToString().TrimEnd('0', '1', '2', '3', '4', '5', '6', '7', '8', '9').TrimEnd('.');
                 }
             }
-        }
-
-        // Below are temporary classes which include existing properties from other types in schema.org,
-        // pending the new Dataset API Discovery spec (https://www.openactive.io/dataset-api-discovery/EditorsDraft).
-
-        // The key elements of the below defacto standard format are currently in use across all existing OpenActive data publishers,
-        // so it is safe to use the below while we wait for the spec.
-
-        // Once the new spec is released and the OpenActive machine readable data models are updated,
-        // the below will then be included in OpenActive.NET, so can be removed from here.
-
-        public class DatasetExtended : Schema.NET.Dataset
-        {
-            [JsonProperty("url")]
-            public new Uri Url { get; set; }
-            [JsonProperty("name")]
-            public new string Name { get; set; }
-            [JsonProperty("description")]
-            public new string Description { get; set; }
-            [JsonProperty("keywords")]
-            public new string[] Keywords { get; set; }
-            [JsonProperty("license")]
-            public new Uri License { get; set; }
-            [JsonProperty("distribution")]
-            public new List<DataDownload> Distribution { get; set; }
-            [JsonProperty("discussionUrl")]
-            public new Uri DiscussionUrl { get; set; }
-            [JsonProperty("documentation")]
-            public Uri Documentation { get; set; }
-            [JsonProperty("inLanguage")]
-            public new string InLanguage { get; set; }
-            [JsonProperty("publisher")]
-            public new OpenActive.NET.Organization Publisher { get; set; }
-            [JsonProperty("datePublished")]
-            public new DateTimeOffset? DatePublished { get; set; }
-            [JsonProperty("schemaVersion")]
-            public new string SchemaVersion { get; set; }
-            [JsonProperty("softwareVersion")]
-            public string SoftwareVersion { get; set; }
-            [JsonProperty("backgroundImage")]
-            public Uri BackgroundImage { get; set; }
-            [JsonProperty("platformName")]
-            public string PlatformName { get; set; }
-            [JsonProperty("platformUrl")]
-            public Uri PlatformUrl { get; set; }
-            [JsonProperty("json")]
-            public string json { get; set; }
-        }
-
-        public class DataDownload : Schema.NET.DataDownload
-        {
-            [JsonProperty("name")]
-            public new string Name { get; set; }
-            [JsonProperty("additionalType")]
-            public new Uri AdditionalType { get; set; }
-            [JsonProperty("encodingFormat")]
-            public new string EncodingFormat { get; set; }
-            [JsonProperty("contentUrl")]
-            public new Uri ContentUrl { get; set; }
         }
     }
 }
